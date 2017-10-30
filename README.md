@@ -19,8 +19,8 @@ First attempt at securing resources was also included.
 2. Setting springboot actuator path contexts and enabling security via ROLE_
 3. Basic Authentication vs. Form Authentication (starting to evaluate LDAP or another more secure form of authenticating user requests)
 
-###To test this API (after cloning and importing):
-#####1. Sample POST request to insert multiple people into the H2 database using REST Controller resource path /persons
+### To test this API (after cloning and importing):
+##### 1. Sample POST request to insert multiple people into the H2 database using REST Controller resource path /persons
 
 ```http
 POST /persons HTTP/1.1
@@ -56,7 +56,7 @@ Cache-Control: no-cache
 ]
 ```
 
-#####2. Sample POST request to insert single person into the H2 database using JPA Repository resource path /people
+##### 2. Sample POST request to insert single person into the H2 database using JPA Repository resource path /people
 ```http
 POST /people HTTP/1.1
 Host: localhost:8080
@@ -71,7 +71,7 @@ Cache-Control: no-cache
 }
 ```
 
-#####3. Sample PUT request to update a single person by resource id using JPA Repository resource path /people/{id}
+##### 3. Sample PUT request to update a single person by resource id using JPA Repository resource path /people/{id}
 ```http
 PUT /people/1 HTTP/1.1
 Host: localhost:8080
@@ -86,22 +86,22 @@ Cache-Control: no-cache
 }
 ```
 
-#####4. GET request to retrieve people records, using JPA Repository, updated between two dates /people/search/findByLastUpdatedBetween?...
+##### 4. GET request to retrieve people records, using JPA Repository, updated between two dates /people/search/findByLastUpdatedBetween?...
 ```
 http://localhost:8080/people/search/findByLastUpdatedBetween?startDate=2017-11-01T00:00:00Z&endDate=2017-11-04T08:00:00Z
 ```
 
-#####5. GET request to retrieve people records, using JPA Repository, updated on or after a date /people/search/findByLastUpdatedGreaterThanEqual?...
+##### 5. GET request to retrieve people records, using JPA Repository, updated on or after a date /people/search/findByLastUpdatedGreaterThanEqual?...
 ```
 http://localhost:8080/people/search/findByLastUpdatedGreaterThanEqual?startDate=2011-11-01T00:00:00Z
 ```
 
-#####6. GET request to retrieve ALL people records, using REST Controller resource path /persons
+##### 6. GET request to retrieve ALL people records, using REST Controller resource path /persons
 ```
 http://localhost:8080/persons
 ```
 
-#####7. GET request to retrieve ALL people records, using JPA Repository resource path /people
+##### 7. GET request to retrieve ALL people records, using JPA Repository resource path /people
 ```
 http://localhost:8080/people
 ```
