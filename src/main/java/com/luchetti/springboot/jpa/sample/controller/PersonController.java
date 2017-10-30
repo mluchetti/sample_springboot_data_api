@@ -25,7 +25,7 @@ import com.luchetti.springboot.jpa.sample.exceptions.UserNotFoundException;
 public class PersonController {
 	
 	private final PersonRepository pr;
-	ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+//	ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
 	@Autowired
 	PersonController(PersonRepository pr){
@@ -33,13 +33,18 @@ public class PersonController {
 	}
 	
 	@RequestMapping(path="",method=RequestMethod.POST,consumes=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Person> setPeople(@RequestBody Person p) throws JsonParseException, JsonMappingException, IOException {
+	public ResponseEntity<List<Person>> setPeople(@RequestBody List<Person> p) throws JsonParseException, JsonMappingException, IOException {
 		
 //		this.validatePerson(p.getId());
-		List<Person> pl = pr.findByLastName(p.getLastName());
+//		List<Person> pl = pr.findByLastName(p.getLastName());
 		pr.save(p);
-		return  new ResponseEntity<Person>(p, HttpStatus.OK);
+		return  new ResponseEntity<List<Person>>(p, HttpStatus.OK);
 	}
+
+	@RequestMapping(path="",method=RequestMethod.GET,produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<Person>> getPeople() {
+		return  new ResponseEntity<List<Person>>(pr.findAll(), HttpStatus.OK);
+	}	
 	
 	private void validatePerson(long userId) {
 		this.pr.findById(userId).orElseThrow(
