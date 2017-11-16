@@ -11,8 +11,9 @@ Two main APIs are present in the application:
 
 Both APIs were built using the Person Entity as the primary object with several functional aspects being tested:
 1. Testing READ_ONLY, WRITE_ONLY and READ_WRITE properties
-2. ZonedDateTime properties and how to properly use them with JSON and JPA
+2. `ZonedDateTime` properties and how to properly use them with JSON and JPA
 3. findBy... repository methods
+4. READ_ONLY fields as `@Transient` to test non-persisted `Entity` fields
 
 First attempt at securing resources was also included.
 1. Securing API resource paths
