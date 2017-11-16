@@ -5,8 +5,6 @@ import java.time.temporal.ChronoUnit;
 
 import javax.persistence.*;
 
-import org.springframework.format.annotation.DateTimeFormat;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
@@ -27,8 +25,10 @@ public class Person {
 	ZonedDateTime lastUpdated;
 
 	@JsonProperty(access=Access.READ_ONLY)
+	@Transient
 	private String ageMessage;
 	@JsonProperty(access=Access.READ_ONLY)
+	@Transient
 	private int age;
 
 	public long getId() {
@@ -51,13 +51,7 @@ public class Person {
 	}
 	public void setBirthDate(LocalDate birthDate) {
 		this.birthDate = birthDate;
-		LocalDate today = LocalDate.now(ZoneId.of("America/Chicago"));
-
-		Period p = Period.between(birthDate, today);
-		long p2 = ChronoUnit.DAYS.between(birthDate, today);
-		
-		this.ageMessage = String.format("%s is %d years, %d months, and %d days old. (%d days total)", this.getFirstName(),p.getYears(),p.getMonths(),p.getDays(),p2);
-		this.age = p.getYears();
+		this.initTransientFields();
 	}
 	public String getAgeMessage() {
 		return this.ageMessage;
@@ -72,5 +66,18 @@ public class Person {
 	public void setLastUpdated(ZonedDateTime lastUpdated) {
 		this.lastUpdated = lastUpdated;
 	}
-	
+
+	/**
+	 * Initializes calculated, read only fields
+	 */
+	@PostLoad
+	private void initTransientFields() {
+		LocalDate today = LocalDate.now(ZoneId.of("America/Chicago"));
+
+		Period p = Period.between(this.getBirthDate(), today);
+		long p2 = ChronoUnit.DAYS.between(this.getBirthDate(), today);
+		
+		this.ageMessage = String.format("%s is %d years, %d months, and %d days old. (%d days total)", this.getFirstName(),p.getYears(),p.getMonths(),p.getDays(),p2);
+		this.age = p.getYears();
+	}
 }
