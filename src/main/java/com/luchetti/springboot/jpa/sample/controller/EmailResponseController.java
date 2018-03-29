@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.luchetti.springboot.jpa.sample.domain.*;
+import com.luchetti.springboot.jpa.sample.domain.uuid.EmailUuid;
+import com.luchetti.springboot.jpa.sample.domain.uuid.UuidClient;
+import com.luchetti.springboot.jpa.sample.exception.ExpiredUuidException;
 import com.luchetti.springboot.jpa.sample.exception.InvalidUuidException;
 
 @RestController
@@ -34,11 +37,13 @@ public class EmailResponseController {
 
 	private final EmailResponseRepository er;
 	private final EmailResponseStatusRepository esr;
+	private final UuidClient uuidClient;
 
 	@Autowired
-	public EmailResponseController(EmailResponseRepository er, EmailResponseStatusRepository esr){
+	public EmailResponseController(EmailResponseRepository er, EmailResponseStatusRepository esr, UuidClient uuidClient){
 		this.er = er;	
 		this.esr = esr;
+		this.uuidClient = uuidClient;
 	}
 	
 	@RequestMapping(path="",method=RequestMethod.POST,consumes=MediaType.APPLICATION_JSON_VALUE)
@@ -54,23 +59,23 @@ public class EmailResponseController {
 			@NotNull @Valid @RequestParam(value = "uuid", required = true) String uuid,
 			@NotNull @Valid @RequestParam(value = "status", required = true) Integer status) throws JsonParseException, JsonMappingException, IOException {
 		
-		System.out.println(String.format("Processing a %s reply of %d from UUID %s", source, status, uuid));
-		Optional<EmailResponse> eResponse = er.findByUuid(uuid);
 		URI location = null;
-
+		
 		try {
+			System.out.println(String.format("Processing a %s reply of %d from UUID %s", source, status, uuid));
+			Optional<EmailResponse> eResponse = er.findByUuid(uuid);
 			//default "Something went wrong" landing page
-			location = new URI("https://www.ameren.com/404NotFound");
-			if(!eResponse.isPresent()) {
-				processNewResponse(source, uuid, status);
-				//TODO Need to have a real static content page on Ameren.com for outage response success
-				location = new URI("https://www.ameren.com");
-			} else {
+			location = URI.create("https://www.ameren.com/404NotFound");
+			if(eResponse.isPresent()) {
 				processRepeatResponse(uuid, status, eResponse.get());
 				//TODO Need to have a real static content page on Ameren.com for outage response already responded or expired
-				location = new URI("https://outagemap.ameren.com/");
+				location = URI.create("https://outagemap.ameren.com/");
+			} else {
+				processNewResponse(source, uuid, status);
+				//TODO Need to have a real static content page on Ameren.com for outage response success
+				location = URI.create("https://www.ameren.com");
 			}
-		} catch (InvalidUuidException e) {
+		} catch (InvalidUuidException|ExpiredUuidException e) {
 			e.printStackTrace();
 			//System.err.println(e.getMessage());
 //			return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
@@ -78,9 +83,11 @@ public class EmailResponseController {
 			responseHeaders.setLocation(location);
 			responseHeaders.set("Error", e.getMessage());
 			return new ResponseEntity<String>(responseHeaders, HttpStatus.TEMPORARY_REDIRECT);	
-		} catch (URISyntaxException e) {
+		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			//System.err.println(e.getMessage());
+			HttpHeaders responseHeaders = new HttpHeaders();
+			responseHeaders.set("Error", e.getMessage());
 			return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
@@ -111,31 +118,39 @@ public class EmailResponseController {
 	 * @param source what alert email this response is originating
 	 * @param uuid unique identifier of the alert email. this is used for a call an account lookup API
 	 * @param status the response from the user. this will be 1, 2 or 3
-	 * @throws Exception 
+	 * @throws ExpiredUuidException 
+	 * @throws InvalidUuidException 
 	 */
-	private void processNewResponse(String source, String uuid, Integer status) throws InvalidUuidException {
+	private void processNewResponse(String source, String uuid, Integer status) throws InvalidUuidException, ExpiredUuidException {
 		System.out.println(String.format("First response from UUID %s", uuid));
 
-		if(lookupUuid(uuid)) {
-			EmailResponse entity = new EmailResponse();
-			entity.setCreated(ZonedDateTime.now());
-			entity.setUuid(uuid);
-			entity.setSource(source);
-			entity.setLastUpdated(entity.getCreated());
-			entity.addResponses(new EmailResponseStatus().respVal(status).uuid(uuid).created(entity.getCreated()).response(entity));
-			er.save(entity);
-			esr.save(entity.getResponseStatus().get(entity.getResponseStatus().size()-1));
-		}
-		else {
-			throw new InvalidUuidException(String.format("Invalid UUID %s", uuid));
-		}
+		EmailUuid e = lookupUuid(uuid);
+		
+		EmailResponse entity = new EmailResponse();
+		entity.setCreated(ZonedDateTime.now());
+		entity.setUuid(uuid);
+		entity.setSource(source);
+		entity.setLastUpdated(entity.getCreated());
+		entity.addResponses(new EmailResponseStatus().respVal(status).uuid(uuid).created(entity.getCreated()).response(entity));
+		er.save(entity);
+		esr.save(entity.getResponseStatus().get(entity.getResponseStatus().size()-1));
 	}
 
-	private boolean lookupUuid(String uuid) {
+	private EmailUuid lookupUuid(String uuid) throws InvalidUuidException, ExpiredUuidException {
 		// TODO API Call to retrieve contact info relative to UUID
-		double d = Math.random();
-		System.out.println(d);
-		return d<0.5?true:false;		
+		EmailUuid e = uuidClient.lookupUuid(uuid);
+		
+		switch (e.getResponse()) {
+		case VALID:
+			break;
+		case EXPIRED:
+			throw new ExpiredUuidException(String.format("Expired UUID %s", uuid));
+		case NOT_FOUND:
+			throw new InvalidUuidException(String.format("Invalid UUID %s", uuid));
+		default:
+			break;
+		}
+		return e;
 	}
 	
 //	@RequestMapping(path="",method=RequestMethod.POST,consumes=MediaType.APPLICATION_JSON_VALUE)

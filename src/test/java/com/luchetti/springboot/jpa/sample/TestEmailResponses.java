@@ -34,6 +34,7 @@ import com.luchetti.springboot.jpa.sample.domain.EmailResponse;
 import com.luchetti.springboot.jpa.sample.domain.EmailResponseRepository;
 import com.luchetti.springboot.jpa.sample.domain.EmailResponseStatus;
 import com.luchetti.springboot.jpa.sample.domain.EmailResponseStatusRepository;
+import com.luchetti.springboot.jpa.sample.domain.uuid.UuidClient;
 
 @RunWith(SpringRunner.class)
 @DataJpaTest
@@ -47,6 +48,8 @@ public class TestEmailResponses {
 	private EmailResponseRepository resp;
 	@Autowired
 	private EmailResponseStatusRepository statResp;
+	@Autowired
+	private UuidClient uuidClient;
 
     //private MockMvc mockMvc;
 
@@ -87,7 +90,7 @@ public class TestEmailResponses {
 	@Test
 	public void processEmailResponseLink_returnHttpStatusRedirect() throws JsonParseException, JsonMappingException, IOException {
 		//arrange
-		controller = new EmailResponseController(resp, statResp);
+		controller = new EmailResponseController(resp, statResp, uuidClient);
 		
 		//act
 		ResponseEntity<String> e = controller.getAlertResponse(e1.getSource(), e1.getUuid(), e1.getResponseStatus().get(0).getRespVal());
@@ -101,7 +104,7 @@ public class TestEmailResponses {
 	public void processEmailResponseLink_returnHttpStatusNotFound() throws JsonParseException, JsonMappingException, IOException {
 		//arrange
 //		Mockito.when(Math.random()).thenReturn(0.4);
-		controller = new EmailResponseController(resp, statResp);
+		controller = new EmailResponseController(resp, statResp, uuidClient);
 		
 		//act
 		ResponseEntity<String> e = controller.getAlertResponse(e1.getSource(), "Unknown_UUID", e1.getResponseStatus().get(0).getRespVal());
@@ -114,24 +117,16 @@ public class TestEmailResponses {
 	@Test
 	public void processEmailResponseLink_returnHttpStatusInvalidUuid() throws Exception {
 		//arrange
-		controller = new EmailResponseController(resp, statResp);
+		controller = new EmailResponseController(resp, statResp, uuidClient);
 		
 		//act
 		ResponseEntity<String> e = controller.getAlertResponse(e1.getSource(), "Invalid_UUID", e1.getResponseStatus().get(0).getRespVal());
-		
-		/*
-		mockMvc.perform(get("/responses")
-				.param("source", e1.getSource())
-				.param("uuid", "Invalid-UUID")
-				.param("status", Integer.toString(e1.getResponseStatus().get(0).getRespVal())))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(header().string("Location", "https://www.ameren.com/404NotFound"))
-			.andExpect(redirectedUrl("https://www.ameren.com/404NotFound"));
-		*/
 		
 		//assert
 		assertThat(e.getStatusCode()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
 		assertThat(e.getHeaders().containsKey("Location"));
 		assertThat(e.getHeaders().get("Location").get(0)).isSameAs("https://www.ameren.com/404NotFound");
 	}
+	
+
 }
